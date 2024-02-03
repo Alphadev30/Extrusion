@@ -1,0 +1,11 @@
+/* BabylonScene.css */
+.babylonCanvas {
+    width: 70%;
+    height: 70%; /* Full height */
+    outline: none; /* Remove outline for better appearance */
+    touch-action: none; /* Disable default touch actions to handle custom interactions */
+    margin: 15% 15%;
+  }
+  
+  /* Additional styles for UI elements can go here */
+  
