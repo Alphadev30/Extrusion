@@ -15,6 +15,7 @@ import earcut from 'earcut'; // Import earcut
 
 
 import './BabylonScene.css';
+import { shadowsVertex } from '@babylonjs/core/Shaders/ShadersInclude/shadowsVertex';
 
 const BabylonScene = (props) => {
     const canvasRef = useRef(null);
@@ -28,6 +29,9 @@ const BabylonScene = (props) => {
     // This state will indicate whether the user is in drawing mode
     const [isDrawing, setIsDrawing] = useState(true);
 
+    // State to control drawing mode
+    const [drawMode, setDrawMode] = useState(false);
+
     useEffect(() => {
         if (canvasRef.current) {
             const eng = new Engine(canvasRef.current, true);
@@ -36,15 +40,14 @@ const BabylonScene = (props) => {
             setScene(scn);
             scn.clearColor = new Color4(0.6, 0.8, 0.8, 1);
 
-            const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2, 10, new Vector3(0, 1, 0), scn);
-            camera.setPosition(new Vector3(0, 100, 0)); // Adjust the height as needed
-            camera.setTarget(Vector3.Zero()); // Look at the origin (ground plane)
-            camera.attachControl(canvasRef.current, true);
-
             const light = new HemisphericLight("light", new Vector3(11, 0.1, 0), scn);
 
             const grnd = MeshBuilder.CreateGround("ground", { width: 90, height: 90 }, scn);
             setGround(grnd);
+
+            const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2, 10, new Vector3(0, 1, 0), scene);
+            camera.setPosition(new Vector3(0, 100, 0)); // Adjust the height as needed
+            camera.setTarget(Vector3.Zero()); // Look at the origin (ground plane)
 
             eng.runRenderLoop(() => {
                 scn.render();
@@ -62,6 +65,17 @@ const BabylonScene = (props) => {
         }
     }, [canvasRef]);
 
+    useEffect(() => {
+        if (scene) {
+            // Handle camera control based on isDrawing
+            if (isDrawing) {
+                scene.activeCamera.detachControl();
+            } else {
+                scene.activeCamera.attachControl(canvasRef.current, true);
+            }
+        }
+    }, [isDrawing, scene]);
+
     // This useEffect will handle the pointer down event
     useEffect(() => {
         if (scene && ground) {
@@ -78,6 +92,18 @@ const BabylonScene = (props) => {
             const onPointerDown = (evt) => {
                 if (isDrawing) {
                     const groundPosition = getGroundPosition();
+                    if (groundPosition) {
+                        setVertices([...vertices, groundPosition]);
+                    }
+                }else{
+                    setIsDrawing(true)
+                }
+            };
+
+            //Event listener for pointer move events
+            const onPointerMove = (evt) => {
+                if (isDrawing && drawMode) {
+                    const groundPosition = getGroundPosition();
 
                     if (groundPosition) {
                         setVertices([...vertices, groundPosition]);
@@ -86,9 +112,13 @@ const BabylonScene = (props) => {
             };
 
             scene.onPointerObservable.add(onPointerDown, PointerEventTypes.POINTERDOWN);
+            //scene.onPointerObservable.add(onPointerMove, PointerEventTypes.POINTERMOVE);
+
 
             return () => {
                 scene.onPointerObservable.removeCallback(onPointerDown);
+                //scene.onPointerObservable.removeCallback(onPointerMove);
+
             };
         }
     }, [scene, ground, vertices, isDrawing]);  // Add the dependencies here
@@ -134,18 +164,20 @@ const BabylonScene = (props) => {
             }
 
             //top
-            shape.push(new Vector3(0, 0, 0.1));
-            shape.push(new Vector3(-0.3, 0, 0.1));
+            //shape.push(new Vector3(0, 0, 0.1));
+            //shape.push(new Vector3(-0.3, 0, 0.1));
 
             const mat = new StandardMaterial("mat1", scene);
             mat.alpha = 1.0;
             mat.diffuseColor = new Color4(0.5, 0.5, 1.0);
             mat.backFaceCulling = false;
 
+            console.log("Shape : ", shape)
+
             //let extrudedMesh = MeshBuilder.PolygonMeshBuilder("extrudedShape", options, scene);
-            const extrudedMesh = MeshBuilder.ExtrudePolygon("polytri", {shape: shape, depth: 20});
+            const extrudedMesh = MeshBuilder.ExtrudePolygon("polytri", { shape: shape, depth: 20 });
             extrudedMesh.material = mat;
-            extrudedMesh.position.y += 10.75;
+            extrudedMesh.position.y += 13.75;
             //extrudedMesh.rotate(Vector3.Up(), Math.PI / 2); // Rotate by 90 degrees (Math.PI / 2) around the Y-axis
 
             //extrudedMesh.scaling.y = 200.0; // Scale vertically
@@ -157,9 +189,11 @@ const BabylonScene = (props) => {
         // Handler to detect Enter key press
         const handleKeyDown = (event) => {
             // Inside the Enter key press handler
-            if (event.key === 'Enter' && isDrawing) {
+            if (event.key === 'Enter') {
                 setIsDrawing(false); // Stop drawing
-                console.log(vertices.length)
+                if (vertices.length > 0) {
+                    vertices.pop(); // Remove the last element
+                }
                 if (vertices.length > 2) {
                     // Calculate the average z value of the mouse-drawn shape vectors
                     const averageZ = vertices.reduce((sum, v) => sum + v.z, 0) / vertices.length;
