@@ -9,9 +9,14 @@ import {
     MeshBuilder,
     Color4,
     PointerEventTypes,
-    StandardMaterial
+    StandardMaterial,
+    Mesh,
+    ActionManager,
+    ExecuteCodeAction,
 } from '@babylonjs/core';
 import earcut from 'earcut'; // Import earcut
+
+import Navbar from './Navbar';
 
 
 import './BabylonScene.css';
@@ -29,8 +34,17 @@ const BabylonScene = (props) => {
     // This state will indicate whether the user is in drawing mode
     const [isDrawing, setIsDrawing] = useState(true);
 
+    const [isMoving, setIsMoving] = useState(false);
+
+
     // State to control drawing mode
     const [drawMode, setDrawMode] = useState(false);
+
+    const [extrudedMeshes, setExtrudedMeshes] = useState([]);
+    const [mousePosition, setMousePosition] = useState(new Vector3(0, 0, 0));
+    const [selectedMesh, setSelectedMesh] = useState(null);
+
+
 
     useEffect(() => {
         if (canvasRef.current) {
@@ -41,6 +55,15 @@ const BabylonScene = (props) => {
             scn.clearColor = new Color4(0.6, 0.8, 0.8, 1);
 
             const light = new HemisphericLight("light", new Vector3(11, 0.1, 0), scn);
+
+            eng.runRenderLoop(() => {
+                scn.render();
+                // Update the position of extruded meshes based on mouse cursor
+                extrudedMeshes.forEach((extrudedMesh) => {
+                    const offset = mousePosition.clone().subtract(extrudedMesh.position);
+                    extrudedMesh.position.addInPlace(offset.scale(0.05)); // Adjust the speed of following
+                });
+            });
 
             const grnd = MeshBuilder.CreateGround("ground", { width: 90, height: 90 }, scn);
             setGround(grnd);
@@ -64,6 +87,20 @@ const BabylonScene = (props) => {
             };
         }
     }, [canvasRef]);
+
+    useEffect(() => {
+        if (engine) {
+            engine.runRenderLoop(() => {
+                scene.render();
+                // Update the position of extruded meshes based on mouse cursor
+                extrudedMeshes.forEach((extrudedMesh) => {
+                    const offset = mousePosition.clone().subtract(extrudedMesh.position);
+                    extrudedMesh.position.addInPlace(offset.scale(0.05)); // Adjust the speed of following
+                });
+            });
+        }
+
+    }, [extrudedMeshes, mousePosition]);
 
     useEffect(() => {
         if (scene) {
@@ -95,7 +132,7 @@ const BabylonScene = (props) => {
                     if (groundPosition) {
                         setVertices([...vertices, groundPosition]);
                     }
-                }else{
+                } else {
                     setIsDrawing(true)
                 }
             };
@@ -112,12 +149,12 @@ const BabylonScene = (props) => {
             };
 
             scene.onPointerObservable.add(onPointerDown, PointerEventTypes.POINTERDOWN);
-            //scene.onPointerObservable.add(onPointerMove, PointerEventTypes.POINTERMOVE);
+            scene.onPointerObservable.add(onPointerMove, PointerEventTypes.POINTERMOVE);
 
 
             return () => {
                 scene.onPointerObservable.removeCallback(onPointerDown);
-                //scene.onPointerObservable.removeCallback(onPointerMove);
+                scene.onPointerObservable.removeCallback(onPointerMove);
 
             };
         }
@@ -133,57 +170,58 @@ const BabylonScene = (props) => {
         }
     }, [scene, vertices]);  // Dependency on vertices so it updates when new points are added
 
-
-    const calculateCenterPoint = (vertices) => {
-        // Calculate the average of x and y coordinates to find the center point
-        const centerX = vertices.reduce((sum, vertex) => sum + vertex.x, 0) / vertices.length;
-        const centerY = vertices.reduce((sum, vertex) => sum + vertex.y, 0) / vertices.length;
-
-        return new Vector3(centerX, centerY, 0);
-    };
-
     const createExtrudedShape = (shape) => {
 
         if (scene) {
-
-            //const centerPoint = calculateCenterPoint(shape);
-
-            // Define the path to start from the center point and go up by the extrusion height
-            //const path = [centerPoint, new Vector3(centerPoint.x, centerPoint.z, 1)];
-
-            // const options = {
-            //     shape: shape,
-            //     path: path,
-            //     updatable: true
-
-            // };
-
-            //curved front
-            for (let i = 0; i < 20; i++) {
-                shape.push(new Vector3(0.2 * Math.cos(i * Math.PI / 40), 0, 0.2 * Math.sin(i * Math.PI / 40) - 0.1));
-            }
-
-            //top
-            //shape.push(new Vector3(0, 0, 0.1));
-            //shape.push(new Vector3(-0.3, 0, 0.1));
-
             const mat = new StandardMaterial("mat1", scene);
             mat.alpha = 1.0;
             mat.diffuseColor = new Color4(0.5, 0.5, 1.0);
             mat.backFaceCulling = false;
 
             console.log("Shape : ", shape)
-
-            //let extrudedMesh = MeshBuilder.PolygonMeshBuilder("extrudedShape", options, scene);
             const extrudedMesh = MeshBuilder.ExtrudePolygon("polytri", { shape: shape, depth: 20 });
             extrudedMesh.material = mat;
             extrudedMesh.position.y += 13.75;
-            //extrudedMesh.rotate(Vector3.Up(), Math.PI / 2); // Rotate by 90 degrees (Math.PI / 2) around the Y-axis
+            // Add the extruded mesh to the state variable
+            setExtrudedMeshes([...extrudedMeshes, extrudedMesh]);
 
-            //extrudedMesh.scaling.y = 200.0; // Scale vertically
+            // Add a click event handler to the mesh
+            extrudedMesh.actionManager = new ActionManager(scene);
+            extrudedMesh.actionManager.registerAction(
+                new ExecuteCodeAction(
+                    ActionManager.OnPickTrigger,
+                    function (evt) {
+                        // Set the selected mesh when clicked
+                        setSelectedMesh(evt.source);
+                        extrudedMesh.position.copyFrom(new Vector3(0,13.75 , 0)); // Change the position as needed
 
+                    }
+                )
+            );
         }
     };
+
+
+    const getGroundPosition = () => {
+        const pickinfo = scene.pick(scene.pointerX, scene.pointerY, mesh => mesh === ground);
+        if (pickinfo.hit) {
+            return pickinfo.pickedPoint;
+        }
+        return null;
+    };
+
+    // Event listener for pointer move events
+    const onPointerMove = (evt) => {
+        
+
+        if(!isDrawing && isMoving){
+            const groundPosition = getGroundPosition();
+
+            setMousePosition(groundPosition);
+        }
+      
+    };
+
 
     useEffect(() => {
         // Handler to detect Enter key press
@@ -217,7 +255,10 @@ const BabylonScene = (props) => {
 
 
     return (
-        <canvas ref={canvasRef} className="babylonCanvas" {...props}></canvas>
+        <>
+            <Navbar drawMode={drawMode} setDrawMode={setDrawMode} isMoving={isMoving} setIsMoving={setIsMoving} />
+            <canvas ref={canvasRef} className="babylonCanvas" onPointerMove={onPointerMove} {...props}></canvas>
+        </>
     );
 };
 
