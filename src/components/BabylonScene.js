@@ -13,6 +13,8 @@ import {
     Mesh,
     ActionManager,
     ExecuteCodeAction,
+    Matrix,
+    VertexBuffer
 } from '@babylonjs/core';
 import earcut from 'earcut'; // Import earcut
 
@@ -27,6 +29,8 @@ const BabylonScene = (props) => {
     const [engine, setEngine] = useState(null);  // State to hold the Babylon engine
     const [scene, setScene] = useState(null);  // State to hold the Babylon scene
     const [ground, setGround] = useState(null);  // State to hold the ground mesh
+    const [camera, setCamera] = useState(null);  // State to hold the ground mesh
+
 
     // This state will hold the vertices of the shape the user is drawing
     const [vertices, setVertices] = useState([]);
@@ -43,6 +47,13 @@ const BabylonScene = (props) => {
     const [extrudedMeshes, setExtrudedMeshes] = useState([]);
     const [mousePosition, setMousePosition] = useState(new Vector3(0, 0, 0));
     const [selectedMesh, setSelectedMesh] = useState(null);
+
+
+    // Vertex editing 
+    const [editMode, setEditMode] = useState(false);
+    const [selectedVertexIndex, setSelectedVertexIndex] = useState(null);
+
+
 
 
 
@@ -72,6 +83,8 @@ const BabylonScene = (props) => {
             camera.setPosition(new Vector3(0, 100, 0)); // Adjust the height as needed
             camera.setTarget(Vector3.Zero()); // Look at the origin (ground plane)
 
+            setCamera(camera);
+
             eng.runRenderLoop(() => {
                 scn.render();
             });
@@ -92,11 +105,7 @@ const BabylonScene = (props) => {
         if (engine) {
             engine.runRenderLoop(() => {
                 scene.render();
-                // Update the position of extruded meshes based on mouse cursor
-                extrudedMeshes.forEach((extrudedMesh) => {
-                    const offset = mousePosition.clone().subtract(extrudedMesh.position);
-                    extrudedMesh.position.addInPlace(offset.scale(0.05)); // Adjust the speed of following
-                });
+
             });
         }
 
@@ -127,19 +136,19 @@ const BabylonScene = (props) => {
 
             // Event listener for pointer down events
             const onPointerDown = (evt) => {
-                if (isDrawing) {
+                if (isDrawing && !isMoving) {
                     const groundPosition = getGroundPosition();
                     if (groundPosition) {
                         setVertices([...vertices, groundPosition]);
                     }
                 } else {
-                    setIsDrawing(true)
+                    setIsDrawing(false)
                 }
             };
 
             //Event listener for pointer move events
             const onPointerMove = (evt) => {
-                if (isDrawing && drawMode) {
+                if (isDrawing && drawMode && !isMoving) {
                     const groundPosition = getGroundPosition();
 
                     if (groundPosition) {
@@ -158,7 +167,7 @@ const BabylonScene = (props) => {
 
             };
         }
-    }, [scene, ground, vertices, isDrawing]);  // Add the dependencies here
+    }, [scene, ground, vertices, isDrawing, isMoving]);  // Add the dependencies here
 
     // A separate useEffect for drawing lines between vertices
     useEffect(() => {
@@ -178,10 +187,14 @@ const BabylonScene = (props) => {
             mat.diffuseColor = new Color4(0.5, 0.5, 1.0);
             mat.backFaceCulling = false;
 
-            console.log("Shape : ", shape)
-            const extrudedMesh = MeshBuilder.ExtrudePolygon("polytri", { shape: shape, depth: 20 });
+            // console.log("Shape : ", shape)
+            const extrudedMesh = MeshBuilder.ExtrudePolygon("polytri", { shape: shape, depth: 15, updatable: true });
             extrudedMesh.material = mat;
             extrudedMesh.position.y += 13.75;
+
+            extrudedMesh.metadata = "polygon"
+            extrudedMesh.isPickable = true;
+
             // Add the extruded mesh to the state variable
             setExtrudedMeshes([...extrudedMeshes, extrudedMesh]);
 
@@ -193,12 +206,72 @@ const BabylonScene = (props) => {
                     function (evt) {
                         // Set the selected mesh when clicked
                         setSelectedMesh(evt.source);
-                        extrudedMesh.position.copyFrom(new Vector3(0,13.75 , 0)); // Change the position as needed
+                        //extrudedMesh.position.copyFrom(new Vector3(0, 0, 0)); // Change the position as needed
 
                     }
                 )
             );
         }
+    };
+
+    const selectVertex = (mesh, point) => {
+        if (editMode) {
+
+            console.log("Mesh, point", mesh, " ", point)
+            const closestVertexIndex = findClosestVertexIndex(mesh, point);
+            setSelectedVertexIndex(closestVertexIndex);
+        }
+    };
+
+    const findClosestVertexIndex = (mesh, point) => {
+        // Get the positions of the vertices
+        const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
+        let closestIndex = -1;
+        let minDistance = Infinity;
+
+        // Loop through each set of coordinates (x, y, z)
+        for (let i = 0; i < positions.length; i += 3) {
+            // Create a Vector3 for each vertex position
+            const vertex = new Vector3(positions[i], positions[i + 1], positions[i + 2]);
+
+            // Transform the local vertex position to world position
+            const worldVertex = Vector3.TransformCoordinates(vertex, mesh.getWorldMatrix());
+
+            // Calculate the distance from the world vertex position to the clicked point
+            const distance = Vector3.Distance(worldVertex, point);
+
+            // If this distance is less than the current minimum, store it and the index
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = i / 3; // Divide by 3 because each vertex consists of 3 values (x, y, z)
+            }
+        }
+
+        return closestIndex;
+    };
+
+    const findAllInstancesOfVertex = (vertexIndex, positions, mesh) => {
+        // This function should return an array of all indices for the vertex
+        let indices = [];
+        const originalVertex = new Vector3(
+            positions[vertexIndex * 3],
+            positions[vertexIndex * 3 + 1],
+            positions[vertexIndex * 3 + 2]
+        );
+
+        // Transform the local vertex position to world position
+        const worldVertex = Vector3.TransformCoordinates(originalVertex, mesh.getWorldMatrix());
+
+        for (let i = 0; i < positions.length / 3; i++) {
+            const pos = new Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+            // Transform each position to world position before comparing
+            const posWorld = Vector3.TransformCoordinates(pos, mesh.getWorldMatrix());
+
+            if (posWorld.equalsWithEpsilon(worldVertex)) {
+                indices.push(i);
+            }
+        }
+        return indices;
     };
 
 
@@ -212,15 +285,81 @@ const BabylonScene = (props) => {
 
     // Event listener for pointer move events
     const onPointerMove = (evt) => {
-        
 
-        if(!isDrawing && isMoving){
-            const groundPosition = getGroundPosition();
+        if (scene && ground) {
 
-            setMousePosition(groundPosition);
+            if (!isDrawing && isMoving) {
+
+                const groundPosition = getGroundPosition();
+                setMousePosition(groundPosition);
+
+                var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
+                var hit = scene.pickWithRay(ray);
+                if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
+                    groundPosition.y += 13.0;
+
+                    // Calculate the center of the polygon based on its bounding box
+                    const boundingBox = hit.pickedMesh.getBoundingInfo().boundingBox;
+                    const center = boundingBox.center;
+
+                    hit.pickedMesh.position.copyFrom(groundPosition.subtract(center));
+                    // extrudedMeshes.forEach((extrudedMesh) => {
+                    //     //const offset = groundPosition.clone().subtract(extrudedMesh.position);
+                    //     //groundPosition.y += 13.0;
+                    //     extrudedMesh.position.copyFrom(hit.pickedPoint);
+                    // });
+                }
+
+            }
+
+            if (editMode && selectedVertexIndex !== null) {
+                const groundPosition = getGroundPosition(evt);
+                if (groundPosition) {
+                    updateVertexPosition(selectedVertexIndex, groundPosition);
+                }
+            }
+
         }
-      
+
+    }
+
+    const onPointerDown = (evt) => {
+        if (editMode && selectedVertexIndex !== null) {
+            setEditMode(false);
+        }
+        else if (editMode && selectedVertexIndex === null) {
+            var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
+            var hit = scene.pickWithRay(ray);
+            //const pickResult = scene.pick(scene.pointerX, scene.pointerY);
+            if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
+                selectVertex(hit.pickedMesh, hit.pickedPoint);
+            }
+
+        }
     };
+
+    const updateVertexPosition = (vertexIndex, newPosition) => {
+        const mesh = selectedMesh; // Your selected mesh
+        let positions = mesh.getVerticesData(VertexBuffer.PositionKind);
+    
+        // Transform the newPosition from world space to the mesh's local space
+        const inverseWorldMatrix = mesh.getWorldMatrix().invert();
+        const localPosition = Vector3.TransformCoordinates(newPosition, inverseWorldMatrix);
+    
+        // Assuming you have a way to get all indices of the vertex in the positions array
+        const allVertexInstances = findAllInstancesOfVertex(vertexIndex, positions, mesh);
+        allVertexInstances.forEach(index => {
+            positions[index * 3] = localPosition.x;
+            positions[index * 3 + 1] = localPosition.y;
+            positions[index * 3 + 2] = localPosition.z;
+        });
+    
+        mesh.updateVerticesData(VertexBuffer.PositionKind, positions, true);
+    };
+    
+
+
+
 
 
     useEffect(() => {
@@ -253,11 +392,17 @@ const BabylonScene = (props) => {
         };
     }, [isDrawing, vertices]); // Empty dependency array ensures this only runs on mount and unmount
 
+    useEffect(() => {
+        if (!editMode) {
+            setSelectedVertexIndex(null);
+        }
+    }, [editMode]);
+
 
     return (
         <>
-            <Navbar drawMode={drawMode} setDrawMode={setDrawMode} isMoving={isMoving} setIsMoving={setIsMoving} />
-            <canvas ref={canvasRef} className="babylonCanvas" onPointerMove={onPointerMove} {...props}></canvas>
+            <Navbar drawMode={drawMode} setDrawMode={setDrawMode} isMoving={isMoving} setIsMoving={setIsMoving} editMode={editMode} setEditMode={setEditMode} />
+            <canvas ref={canvasRef} className="babylonCanvas" onPointerMove={onPointerMove} onPointerDown={onPointerDown} {...props}></canvas>
         </>
     );
 };
