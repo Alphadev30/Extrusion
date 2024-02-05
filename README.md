@@ -1,26 +1,49 @@
-Application README
-Overview
-This application is a 3D scene builder developed using Babylon.js within a React framework. It allows users to interactively create, modify, and interact with 3D objects on a ground plane, leveraging the powerful 3D rendering capabilities of Babylon.js. The application supports drawing shapes on the ground plane, extruding these shapes into 3D polygons, moving these polygons, and editing their vertices.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Scene Builder Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 80%; margin: 0 auto; }
+        img { width: 100%; max-width: 300px; margin: 10px 0; }
+        .image-container { display: flex; justify-content: space-around; }
+        h1, h2 { color: #333; }
+        p { color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>3D Scene Builder Application</h1>
+        <p>An interactive web application for creating, modifying, and interacting with 3D objects using Babylon.js within a React framework.</p>
 
-Key Features
-Drawing Shapes: Users can draw arbitrary 2D shapes on the ground plane by clicking and dragging the mouse.
-Extruding Shapes: The drawn 2D shapes can be extruded into 3D objects, creating a visual representation of polygons in a 3D space.
-Moving Polygons: Users can select and move the extruded polygons across the ground plane to reposition them as needed.
-Editing Vertices: The application supports editing the vertices of the extruded polygons, allowing for detailed adjustments of the shapes.
-Interactive UI: A navbar provides options to switch between different modes (Drawing, Moving, Editing), enhancing the interactivity and usability of the application.
-Controls and Interactions
-Draw Mode: Activate draw mode to start creating shapes. Left-click to place vertices and press 'Enter' to complete the shape and extrude it.
-Move Mode: Switch to move mode to reposition polygons. Click on a polygon to select it, then click and drag to move.
-Edit Mode: In edit mode, click on a polygon to select it, then click on individual vertices to move them, adjusting the shape of the polygon.
-3D Mode: Toggle between draw mode and 3D mode using the navbar button. 3D mode allows for viewing and interacting with the scene without drawing or editing.
-Setup and Architecture
-The application is structured around React components, with the main scene component (BabylonScene) integrating Babylon.js functionalities. The scene setup, including camera, lighting, and ground plane creation, is done within this component. The navbar (Navbar) and footer (Footer) components provide UI controls and information to the user.
+        <h2>Key Features</h2>
+        <ul>
+            <li>Drawing Shapes</li>
+            <li>Extruding Shapes</li>
+            <li>Moving Polygons</li>
+            <li>Editing Vertices</li>
+            <li>Interactive UI</li>
+        </ul>
 
-Key Technologies
-Babylon.js: Utilized for rendering 3D graphics and managing scene interactions.
-React: Framework for building the user interface and managing application state.
-CSS: Styling for the navbar, footer, and overall layout adjustments.
-Running the Application
-Clone the repository to your local machine.
-Navigate to the project directory and run npm install to install dependencies.
-Start the development server with npm start. The application should open in your default web browser.
+        <h2>Controls and Interactions</h2>
+        <ul>
+            <li>Draw Mode: Activate draw mode to start creating shapes.</li>
+            <li>Move Mode: Switch to move mode to reposition polygons.</li>
+            <li>Edit Mode: In edit mode, adjust the shape of polygons.</li>
+            <li>3D Mode: Toggle between draw mode and 3D mode for different interactions.</li>
+        </ul>
+
+        <h2>Setup and Architecture</h2>
+        <p>The application is built using React for the UI and Babylon.js for 3D rendering. It is structured around main scene components, with additional components for UI controls like the navbar and footer.</p>
+
+        <h2>Application Images</h2>
+        <div class="image-container">
+            <img src="path-to-your-image-1.jpg" alt="Application Screenshot 1">
+            <img src="path-to-your-image-2.jpg" alt="Application Screenshot 2">
+            <img src="path-to-your-image-3.jpg" alt="Application Screenshot 3">
+        </div>
+    </div>
+</body>
+</html>
