@@ -1,70 +1,26 @@
-# Getting Started with Create React App
+Application README
+Overview
+This application is a 3D scene builder developed using Babylon.js within a React framework. It allows users to interactively create, modify, and interact with 3D objects on a ground plane, leveraging the powerful 3D rendering capabilities of Babylon.js. The application supports drawing shapes on the ground plane, extruding these shapes into 3D polygons, moving these polygons, and editing their vertices.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Key Features
+Drawing Shapes: Users can draw arbitrary 2D shapes on the ground plane by clicking and dragging the mouse.
+Extruding Shapes: The drawn 2D shapes can be extruded into 3D objects, creating a visual representation of polygons in a 3D space.
+Moving Polygons: Users can select and move the extruded polygons across the ground plane to reposition them as needed.
+Editing Vertices: The application supports editing the vertices of the extruded polygons, allowing for detailed adjustments of the shapes.
+Interactive UI: A navbar provides options to switch between different modes (Drawing, Moving, Editing), enhancing the interactivity and usability of the application.
+Controls and Interactions
+Draw Mode: Activate draw mode to start creating shapes. Left-click to place vertices and press 'Enter' to complete the shape and extrude it.
+Move Mode: Switch to move mode to reposition polygons. Click on a polygon to select it, then click and drag to move.
+Edit Mode: In edit mode, click on a polygon to select it, then click on individual vertices to move them, adjusting the shape of the polygon.
+3D Mode: Toggle between draw mode and 3D mode using the navbar button. 3D mode allows for viewing and interacting with the scene without drawing or editing.
+Setup and Architecture
+The application is structured around React components, with the main scene component (BabylonScene) integrating Babylon.js functionalities. The scene setup, including camera, lighting, and ground plane creation, is done within this component. The navbar (Navbar) and footer (Footer) components provide UI controls and information to the user.
 
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Key Technologies
+Babylon.js: Utilized for rendering 3D graphics and managing scene interactions.
+React: Framework for building the user interface and managing application state.
+CSS: Styling for the navbar, footer, and overall layout adjustments.
+Running the Application
+Clone the repository to your local machine.
+Navigate to the project directory and run npm install to install dependencies.
+Start the development server with npm start. The application should open in your default web browser.
