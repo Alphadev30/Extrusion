@@ -1,18 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Scene Builder Application</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .container { width: 80%; margin: 0 auto; }
-        img { width: 100%; max-width: 300px; margin: 10px 0; }
-        .image-container { display: flex; justify-content: space-around; }
-        h1, h2 { color: #333; }
-        p { color: #666; }
-    </style>
-</head>
 <body>
     <div class="container">
         <h1>3D Scene Builder Application</h1>
