@@ -1,8 +1,10 @@
 // Create a new Navbar component (Navbar.js)
 
 import React from 'react';
+import './Navbar.css'; // Add this line to import the CSS
 
-const Navbar = ({ drawMode, setDrawMode, isMoving, setIsMoving, editMode, setEditMode}) => {
+
+const Navbar = ({isDrawing, setIsDrawing, drawMode, setDrawMode, isMoving, setIsMoving, editMode, setEditMode }) => {
 
   const toggleDrawMode = () => {
     // Toggle the drawMode state when the button is clicked
@@ -19,11 +21,22 @@ const Navbar = ({ drawMode, setDrawMode, isMoving, setIsMoving, editMode, setEdi
     setEditMode(!editMode);
   };
 
+  const toggle3DMode = () => {
+    // Toggle the drawMode state when the button is clicked
+    setIsDrawing(!isDrawing);
+  };
+
   return (
-    <div className="navbar" >
+    <div>
+      <div className="navbar" >
+      <h5>Left click for placing vertex</h5>
+      <h5>Press Enter for extrusion</h5>
+      <button onClick={toggle3DMode}>
+        {isDrawing ? 'Switch to 3D Mode' : 'Switch to Draw Mode'}
+      </button>
 
       <button onClick={toggleDrawMode}>
-        {drawMode ? 'Switch to Sketch Mode' : 'Switch to Drawing Mode'}
+        {drawMode ? 'Switch to Edge Mode' : 'Switch to Pencil Mode'}
       </button>
 
       <button onClick={togglePickMode}>
@@ -31,11 +44,14 @@ const Navbar = ({ drawMode, setDrawMode, isMoving, setIsMoving, editMode, setEdi
       </button>
 
       <button onClick={toggleEditMode}>
-        {editMode ? 'Normal Mode' : 'Edit Mode'}
+        {editMode ? 'Switch to Normal Mode' : 'Switch to Edit Mode'}
       </button>
 
-      <h5>Press Enter for extrusion</h5>
-      {/* Add more buttons if needed */}
+
+
+      
+      </div>
+      
     </div>
   );
 };

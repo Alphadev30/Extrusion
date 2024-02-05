@@ -19,10 +19,12 @@ import {
 import earcut from 'earcut'; // Import earcut
 
 import Navbar from './Navbar';
+import Footer from './Footer'
 
 
 import './BabylonScene.css';
 import { shadowsVertex } from '@babylonjs/core/Shaders/ShadersInclude/shadowsVertex';
+import { isEditable } from '@testing-library/user-event/dist/utils';
 
 const BabylonScene = (props) => {
     const canvasRef = useRef(null);
@@ -55,7 +57,21 @@ const BabylonScene = (props) => {
 
 
 
-
+    useEffect(() => {
+        const canvas = canvasRef.current;
+      
+        const preventScroll = (e) => {
+          e.preventDefault();
+        };
+      
+        // Add event listener to canvas
+        canvas.addEventListener('wheel', preventScroll, { passive: false });
+      
+        // Remove event listener on cleanup
+        return () => {
+          canvas.removeEventListener('wheel', preventScroll);
+        };
+      }, []);
 
     useEffect(() => {
         if (canvasRef.current) {
@@ -76,7 +92,7 @@ const BabylonScene = (props) => {
                 });
             });
 
-            const grnd = MeshBuilder.CreateGround("ground", { width: 90, height: 90 }, scn);
+            const grnd = MeshBuilder.CreateGround("ground", { width: 180, height: 200 }, scn);
             setGround(grnd);
 
             const camera = new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2, 10, new Vector3(0, 1, 0), scene);
@@ -120,6 +136,7 @@ const BabylonScene = (props) => {
                 scene.activeCamera.attachControl(canvasRef.current, true);
             }
         }
+        console.log(isDrawing)
     }, [isDrawing, scene]);
 
     // This useEffect will handle the pointer down event
@@ -141,8 +158,6 @@ const BabylonScene = (props) => {
                     if (groundPosition) {
                         setVertices([...vertices, groundPosition]);
                     }
-                } else {
-                    setIsDrawing(false)
                 }
             };
 
@@ -288,7 +303,7 @@ const BabylonScene = (props) => {
 
         if (scene && ground) {
 
-            if (!isDrawing && isMoving) {
+            if (!isDrawing && isMoving && selectedMesh !== null) {
 
                 const groundPosition = getGroundPosition();
                 setMousePosition(groundPosition);
@@ -296,7 +311,8 @@ const BabylonScene = (props) => {
                 var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
                 var hit = scene.pickWithRay(ray);
                 if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
-                    groundPosition.y += 13.0;
+                    selectedMesh.material.diffuseColor = new Color4(1, 0, 0);
+                    groundPosition.y += 8.0;
 
                     // Calculate the center of the polygon based on its bounding box
                     const boundingBox = hit.pickedMesh.getBoundingInfo().boundingBox;
@@ -308,6 +324,11 @@ const BabylonScene = (props) => {
                     //     //groundPosition.y += 13.0;
                     //     extrudedMesh.position.copyFrom(hit.pickedPoint);
                     // });
+                }
+                if (hit.pickedMesh && hit.pickedMesh.metadata != "polygon") {
+                    if (selectedMesh) {
+                        selectedMesh.material.diffuseColor = new Color4(0.5, 0.5, 1.0); // Reset color to original
+                    }
                 }
 
             }
@@ -324,28 +345,56 @@ const BabylonScene = (props) => {
     }
 
     const onPointerDown = (evt) => {
+        var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
+        var hit = scene.pickWithRay(ray);
+
+        if(hit.pickedMesh && hit.pickedMesh.metadata == "polygon"){
+            setSelectedMesh(hit.pickedMesh);
+        }
+
+        if (hit.pickedMesh && hit.pickedMesh.metadata !== "polygon") {
+            if (selectedMesh) {
+                selectedMesh.material.diffuseColor = new Color4(0.5, 0.5, 1.0); // Reset color to original
+            }
+        }
+
         if (editMode && selectedVertexIndex !== null) {
             setEditMode(false);
         }
+
         else if (editMode && selectedVertexIndex === null) {
-            var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
-            var hit = scene.pickWithRay(ray);
+
             //const pickResult = scene.pick(scene.pointerX, scene.pointerY);
             if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
                 selectVertex(hit.pickedMesh, hit.pickedPoint);
             }
-
         }
+
+        if (isMoving) {
+            setIsMoving(false);
+        }
+
+        if(hit.pickedMesh && hit.pickedMesh.metadata == "polygon"){
+            setSelectedMesh(hit.pickedMesh);
+        }
+
+        
+
+
     };
 
     const updateVertexPosition = (vertexIndex, newPosition) => {
         const mesh = selectedMesh; // Your selected mesh
         let positions = mesh.getVerticesData(VertexBuffer.PositionKind);
-    
+
         // Transform the newPosition from world space to the mesh's local space
         const inverseWorldMatrix = mesh.getWorldMatrix().invert();
         const localPosition = Vector3.TransformCoordinates(newPosition, inverseWorldMatrix);
-    
+
+        // Constrain the y-coordinate to the original y-coordinate of the vertex to maintain the height
+        const originalY = positions[vertexIndex * 3 + 1];
+        localPosition.y = originalY;
+
         // Assuming you have a way to get all indices of the vertex in the positions array
         const allVertexInstances = findAllInstancesOfVertex(vertexIndex, positions, mesh);
         allVertexInstances.forEach(index => {
@@ -353,10 +402,10 @@ const BabylonScene = (props) => {
             positions[index * 3 + 1] = localPosition.y;
             positions[index * 3 + 2] = localPosition.z;
         });
-    
+
         mesh.updateVerticesData(VertexBuffer.PositionKind, positions, true);
     };
-    
+
 
 
 
@@ -368,6 +417,7 @@ const BabylonScene = (props) => {
             // Inside the Enter key press handler
             if (event.key === 'Enter') {
                 setIsDrawing(false); // Stop drawing
+                setDrawMode(false)
                 if (vertices.length > 0) {
                     vertices.pop(); // Remove the last element
                 }
@@ -401,8 +451,9 @@ const BabylonScene = (props) => {
 
     return (
         <>
-            <Navbar drawMode={drawMode} setDrawMode={setDrawMode} isMoving={isMoving} setIsMoving={setIsMoving} editMode={editMode} setEditMode={setEditMode} />
+            <Navbar drawMode={drawMode} setDrawMode={setDrawMode} isDrawing={isDrawing} setIsDrawing={setIsDrawing} isMoving={isMoving} setIsMoving={setIsMoving} editMode={editMode} setEditMode={setEditMode} />
             <canvas ref={canvasRef} className="babylonCanvas" onPointerMove={onPointerMove} onPointerDown={onPointerDown} {...props}></canvas>
+            <Footer />
         </>
     );
 };
