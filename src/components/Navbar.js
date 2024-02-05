@@ -29,13 +29,19 @@ const Navbar = ({isDrawing, setIsDrawing, drawMode, setDrawMode, isMoving, setIs
   return (
     <div>
       <div className="navbar" >
+
       <h5>Left click for placing vertex</h5>
       <h5>Press Enter for extrusion</h5>
+
       <button onClick={toggle3DMode}>
         {isDrawing ? 'Switch to 3D Mode' : 'Switch to Draw Mode'}
       </button>
 
-      <button onClick={toggleDrawMode}>
+       <button
+        onClick={toggleDrawMode}
+        disabled={!isDrawing}
+        className={!isDrawing ? 'button-disabled' : ''}
+      >
         {drawMode ? 'Switch to Edge Mode' : 'Switch to Pencil Mode'}
       </button>
 

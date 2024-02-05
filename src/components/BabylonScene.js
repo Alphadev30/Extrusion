@@ -59,19 +59,19 @@ const BabylonScene = (props) => {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-      
+
         const preventScroll = (e) => {
-          e.preventDefault();
+            e.preventDefault();
         };
-      
+
         // Add event listener to canvas
         canvas.addEventListener('wheel', preventScroll, { passive: false });
-      
+
         // Remove event listener on cleanup
         return () => {
-          canvas.removeEventListener('wheel', preventScroll);
+            canvas.removeEventListener('wheel', preventScroll);
         };
-      }, []);
+    }, []);
 
     useEffect(() => {
         if (canvasRef.current) {
@@ -139,50 +139,6 @@ const BabylonScene = (props) => {
         console.log(isDrawing)
     }, [isDrawing, scene]);
 
-    // This useEffect will handle the pointer down event
-    useEffect(() => {
-        if (scene && ground) {
-            // Function to get the world coordinates from the pointer position
-            const getGroundPosition = () => {
-                const pickinfo = scene.pick(scene.pointerX, scene.pointerY, mesh => mesh === ground);
-                if (pickinfo.hit) {
-                    return pickinfo.pickedPoint;
-                }
-                return null;
-            };
-
-            // Event listener for pointer down events
-            const onPointerDown = (evt) => {
-                if (isDrawing && !isMoving) {
-                    const groundPosition = getGroundPosition();
-                    if (groundPosition) {
-                        setVertices([...vertices, groundPosition]);
-                    }
-                }
-            };
-
-            //Event listener for pointer move events
-            const onPointerMove = (evt) => {
-                if (isDrawing && drawMode && !isMoving) {
-                    const groundPosition = getGroundPosition();
-
-                    if (groundPosition) {
-                        setVertices([...vertices, groundPosition]);
-                    }
-                }
-            };
-
-            scene.onPointerObservable.add(onPointerDown, PointerEventTypes.POINTERDOWN);
-            scene.onPointerObservable.add(onPointerMove, PointerEventTypes.POINTERMOVE);
-
-
-            return () => {
-                scene.onPointerObservable.removeCallback(onPointerDown);
-                scene.onPointerObservable.removeCallback(onPointerMove);
-
-            };
-        }
-    }, [scene, ground, vertices, isDrawing, isMoving]);  // Add the dependencies here
 
     // A separate useEffect for drawing lines between vertices
     useEffect(() => {
@@ -193,6 +149,45 @@ const BabylonScene = (props) => {
             };
         }
     }, [scene, vertices]);  // Dependency on vertices so it updates when new points are added
+
+
+    useEffect(() => {
+        if (!editMode) {
+            setSelectedVertexIndex(null);
+        }
+    }, [editMode]);
+
+    useEffect(() => {
+        // Handler to detect Enter key press
+        const handleKeyDown = (event) => {
+            // Inside the Enter key press handler
+            if (event.key === 'Enter') {
+                setIsDrawing(false); // Stop drawing
+                setDrawMode(false)
+                if (vertices.length > 0) {
+                    vertices.pop(); // Remove the last element
+                }
+                if (vertices.length > 2) {
+                    // Calculate the average z value of the mouse-drawn shape vectors
+                    const averageZ = vertices.reduce((sum, v) => sum + v.z, 0) / vertices.length;
+                    const flattenedVertices = vertices.map(v => new Vector3(v.x, v.y, v.z));
+
+                    createExtrudedShape(flattenedVertices);
+
+                    // Reset vertices to start a new drawing if needed
+                    setVertices([]);
+                }
+            }
+        };
+        // Add event listener for keydown
+        window.addEventListener('keydown', handleKeyDown);
+
+        // Clean up event listener
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isDrawing, vertices]); // Empty dependency array ensures this only runs on mount and unmount
+
 
     const createExtrudedShape = (shape) => {
 
@@ -212,20 +207,6 @@ const BabylonScene = (props) => {
 
             // Add the extruded mesh to the state variable
             setExtrudedMeshes([...extrudedMeshes, extrudedMesh]);
-
-            // Add a click event handler to the mesh
-            extrudedMesh.actionManager = new ActionManager(scene);
-            extrudedMesh.actionManager.registerAction(
-                new ExecuteCodeAction(
-                    ActionManager.OnPickTrigger,
-                    function (evt) {
-                        // Set the selected mesh when clicked
-                        setSelectedMesh(evt.source);
-                        //extrudedMesh.position.copyFrom(new Vector3(0, 0, 0)); // Change the position as needed
-
-                    }
-                )
-            );
         }
     };
 
@@ -289,100 +270,6 @@ const BabylonScene = (props) => {
         return indices;
     };
 
-
-    const getGroundPosition = () => {
-        const pickinfo = scene.pick(scene.pointerX, scene.pointerY, mesh => mesh === ground);
-        if (pickinfo.hit) {
-            return pickinfo.pickedPoint;
-        }
-        return null;
-    };
-
-    // Event listener for pointer move events
-    const onPointerMove = (evt) => {
-
-        if (scene && ground) {
-
-            if (!isDrawing && isMoving && selectedMesh !== null) {
-
-                const groundPosition = getGroundPosition();
-                setMousePosition(groundPosition);
-
-                var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
-                var hit = scene.pickWithRay(ray);
-                if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
-                    selectedMesh.material.diffuseColor = new Color4(1, 0, 0);
-                    groundPosition.y += 8.0;
-
-                    // Calculate the center of the polygon based on its bounding box
-                    const boundingBox = hit.pickedMesh.getBoundingInfo().boundingBox;
-                    const center = boundingBox.center;
-
-                    hit.pickedMesh.position.copyFrom(groundPosition.subtract(center));
-                    // extrudedMeshes.forEach((extrudedMesh) => {
-                    //     //const offset = groundPosition.clone().subtract(extrudedMesh.position);
-                    //     //groundPosition.y += 13.0;
-                    //     extrudedMesh.position.copyFrom(hit.pickedPoint);
-                    // });
-                }
-                if (hit.pickedMesh && hit.pickedMesh.metadata != "polygon") {
-                    if (selectedMesh) {
-                        selectedMesh.material.diffuseColor = new Color4(0.5, 0.5, 1.0); // Reset color to original
-                    }
-                }
-
-            }
-
-            if (editMode && selectedVertexIndex !== null) {
-                const groundPosition = getGroundPosition(evt);
-                if (groundPosition) {
-                    updateVertexPosition(selectedVertexIndex, groundPosition);
-                }
-            }
-
-        }
-
-    }
-
-    const onPointerDown = (evt) => {
-        var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
-        var hit = scene.pickWithRay(ray);
-
-        if(hit.pickedMesh && hit.pickedMesh.metadata == "polygon"){
-            setSelectedMesh(hit.pickedMesh);
-        }
-
-        if (hit.pickedMesh && hit.pickedMesh.metadata !== "polygon") {
-            if (selectedMesh) {
-                selectedMesh.material.diffuseColor = new Color4(0.5, 0.5, 1.0); // Reset color to original
-            }
-        }
-
-        if (editMode && selectedVertexIndex !== null) {
-            setEditMode(false);
-        }
-
-        else if (editMode && selectedVertexIndex === null) {
-
-            //const pickResult = scene.pick(scene.pointerX, scene.pointerY);
-            if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
-                selectVertex(hit.pickedMesh, hit.pickedPoint);
-            }
-        }
-
-        if (isMoving) {
-            setIsMoving(false);
-        }
-
-        if(hit.pickedMesh && hit.pickedMesh.metadata == "polygon"){
-            setSelectedMesh(hit.pickedMesh);
-        }
-
-        
-
-
-    };
-
     const updateVertexPosition = (vertexIndex, newPosition) => {
         const mesh = selectedMesh; // Your selected mesh
         let positions = mesh.getVerticesData(VertexBuffer.PositionKind);
@@ -407,47 +294,112 @@ const BabylonScene = (props) => {
     };
 
 
+    const getGroundPosition = () => {
+        const pickinfo = scene.pick(scene.pointerX, scene.pointerY,  mesh => mesh === ground);
+        console.log(pickinfo.pickedPoint.y)
+        if (pickinfo.pickedPoint.y < 0) {
+            pickinfo.pickedPoint.y = 0;
+        }
+        if (pickinfo.hit) {
+            return pickinfo.pickedPoint;
+        }
+        return null;
+    };
 
+    // Event listener for pointer move events
+    const onPointerMove = (evt) => {
 
+        if (scene && ground) {
 
+            // Polygon moving and visual vues
+            if (!isDrawing && isMoving && selectedMesh !== null) {
 
-    useEffect(() => {
-        // Handler to detect Enter key press
-        const handleKeyDown = (event) => {
-            // Inside the Enter key press handler
-            if (event.key === 'Enter') {
-                setIsDrawing(false); // Stop drawing
-                setDrawMode(false)
-                if (vertices.length > 0) {
-                    vertices.pop(); // Remove the last element
+                const groundPosition = getGroundPosition();
+                setMousePosition(groundPosition);
+                
+                if (groundPosition) {
+                    
+                    var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
+                    var hit = scene.pickWithRay(ray);
+                    if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
+                        hit.pickedMesh.material.diffuseColor = new Color4(1, 0, 0);
+                        setSelectedMesh(selectedMesh)
+                        groundPosition.y += 8.0;
+
+                        // Calculate the center of the polygon based on its bounding box
+                        const boundingBox = hit.pickedMesh.getBoundingInfo().boundingBox;
+                        const center = boundingBox.center;
+
+                        hit.pickedMesh.position.copyFrom(groundPosition.subtract(center));
+                    }
+                    if (hit.pickedMesh && hit.pickedMesh.metadata != "polygon") {
+                        if (selectedMesh) {
+                            selectedMesh.material.diffuseColor = new Color4(0.5, 0.5, 1.0); // Reset color to original
+                        }
+                    }
                 }
-                if (vertices.length > 2) {
-                    // Calculate the average z value of the mouse-drawn shape vectors
-                    const averageZ = vertices.reduce((sum, v) => sum + v.z, 0) / vertices.length;
-                    const flattenedVertices = vertices.map(v => new Vector3(v.x, v.y, v.z));
 
-                    createExtrudedShape(flattenedVertices);
 
-                    // Reset vertices to start a new drawing if needed
-                    setVertices([]);
+            }
+
+            // Edit the vertices
+            if (editMode && selectedVertexIndex !== null) {
+                const groundPosition = getGroundPosition(evt);
+                if (groundPosition) {
+                    updateVertexPosition(selectedVertexIndex, groundPosition);
                 }
             }
-        };
-        // Add event listener for keydown
-        window.addEventListener('keydown', handleKeyDown);
 
-        // Clean up event listener
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isDrawing, vertices]); // Empty dependency array ensures this only runs on mount and unmount
+            // Pencil Mode vertices placing
+            if (isDrawing && drawMode && !isMoving) {
+                const groundPosition = getGroundPosition();
 
-    useEffect(() => {
-        if (!editMode) {
-            setSelectedVertexIndex(null);
+                if (groundPosition) {
+                    setVertices([...vertices, groundPosition]);
+                }
+            }
+
         }
-    }, [editMode]);
 
+    }
+
+    const onPointerDown = (evt) => {
+        var ray = scene.createPickingRay(scene.pointerX, scene.pointerY, Matrix.Identity(), camera)
+        var hit = scene.pickWithRay(ray);
+
+        if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
+            setSelectedMesh(hit.pickedMesh);
+        }
+
+        if (hit.pickedMesh && hit.pickedMesh.metadata !== "polygon") {
+            if (selectedMesh) {
+                selectedMesh.material.diffuseColor = new Color4(0.5, 0.5, 1.0); // Reset color to original
+            }
+        }
+
+        // Add vertcies when clicked
+        if (isDrawing && !isMoving) {
+            const groundPosition = getGroundPosition();
+            if (groundPosition) {
+                setVertices([...vertices, groundPosition]);
+            }
+        }
+
+        // Go back from edit mode
+        if (editMode && selectedVertexIndex !== null) {
+            setEditMode(false);
+        }
+        else if (editMode && selectedVertexIndex === null) {
+            if (hit.pickedMesh && hit.pickedMesh.metadata == "polygon") {
+                selectVertex(hit.pickedMesh, hit.pickedPoint);
+            }
+        }
+
+        // Go back from moving mode
+        if (isMoving) {
+            setIsMoving(false);
+        }
+    };
 
     return (
         <>
