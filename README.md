@@ -28,12 +28,10 @@
         <div class="image-container">
             <img src="./public/appImage.png" alt="Application Screenshot 1">
         </div>
-        <div class="video-container">
-            <video controls>
-                <source src="./public/ExtrusionVideo.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
+        <video width="320" height="240" controls>
+            <source src="./public/ExtrusionVideo.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
     </div>
 </body>
 </html>
